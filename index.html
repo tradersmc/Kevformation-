@@ -373,6 +373,24 @@ Kevin Andriamm
 </div>
 </div>
 
+<!-- ========== VISIONNEUSE LEÇON (PDF/Vidéo) — TOUJOURS AU NIVEAU BODY (hors adminApp) ========== -->
+<div id="lessonViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;padding:16px;overflow-y:auto">
+  <div style="background:#fff;border-radius:16px;max-width:720px;margin:20px auto;padding:20px;position:relative">
+    <button type="button" onclick="closeLessonViewer()" style="position:absolute;top:14px;right:14px;background:#f1f5f9;border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer">✕</button>
+    <h3 id="lessonViewerTitle" style="margin-bottom:16px;padding-right:40px"></h3>
+    <div id="lessonViewerBody"></div>
+  </div>
+</div>
+
+<!-- ========== VISIONNEUSE PREUVE DE PAIEMENT ========== -->
+<div id="preuveViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;padding:16px;overflow-y:auto">
+  <div style="background:#fff;border-radius:16px;max-width:520px;margin:20px auto;padding:20px;position:relative">
+    <button type="button" onclick="closePreuveViewer()" style="position:absolute;top:14px;right:14px;background:#f1f5f9;border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer">✕</button>
+    <h3 style="margin-bottom:16px;padding-right:40px">Preuve de paiement</h3>
+    <img id="preuveViewerImg" src="" alt="Preuve" style="width:100%;border-radius:10px;display:block">
+  </div>
+</div>
+
 <!-- ========== ADMIN LOGIN ========== -->
 <div id="adminApp">
 <div class="admin-login-wrap" id="adminLoginScreen">
@@ -523,24 +541,7 @@ Kevin Andriamm
 </div>
 </div>
 
-<!-- ========== VISIONNEUSE LEÇON (PDF/Vidéo) ========== -->
-<div id="lessonViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:2000;padding:16px;overflow-y:auto">
-<div style="background:#fff;border-radius:16px;max-width:720px;margin:20px auto;padding:20px;position:relative">
-<button onclick="closeLessonViewer()" style="position:absolute;top:14px;right:14px;background:#f1f5f9;border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer">✕</button>
-<h3 id="lessonViewerTitle" style="margin-bottom:16px;padding-right:40px"></h3>
-<div id="lessonViewerBody"></div>
 </div>
-</div>
-
-<!-- ========== VISIONNEUSE PREUVE DE PAIEMENT ========== -->
-<div id="preuveViewerOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:2000;padding:16px;overflow-y:auto">
-<div style="background:#fff;border-radius:16px;max-width:520px;margin:20px auto;padding:20px;position:relative">
-<button onclick="closePreuveViewer()" style="position:absolute;top:14px;right:14px;background:#f1f5f9;border:none;border-radius:50%;width:34px;height:34px;font-size:1.1rem;cursor:pointer">✕</button>
-<h3 style="margin-bottom:16px;padding-right:40px">Preuve de paiement</h3>
-<img id="preuveViewerImg" src="" style="width:100%;border-radius:10px;display:block">
-</div>
-</div>
-
 </div>
 </div>
 </div>
@@ -827,12 +828,11 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById('connexion').style.display = 'block';
     return;
   }
-  if (isAdminSession) { if (loader) loader.style.display = 'none'; return; } // admin login handled separately
-  if (user.email === ADMIN_EMAIL) { if (loader) loader.style.display = 'none'; return; } // avoid rendering member space for admin
+  if (isAdminSession) { if (loader) loader.style.display = 'none'; return; }
+  if (user.email === ADMIN_EMAIL) { if (loader) loader.style.display = 'none'; return; }
 
   try {
     let snap = await getDoc(doc(db, "members", user.uid));
-    // Juste après une inscription, le document Firestore peut prendre un instant à apparaître : on réessaie brièvement.
     let attempts = 0;
     while (!snap.exists() && attempts < 5) {
       await new Promise(r => setTimeout(r, 400));
@@ -848,7 +848,6 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
     currentMemberData = snap.data();
-    // Panneau membre dédié : on quitte complètement le site public (inscription/connexion)
     document.getElementById('publicSite').style.display = 'none';
     document.getElementById('memberApp').style.display = 'block';
     window.scrollTo(0, 0);
@@ -900,7 +899,7 @@ async function renderMemberSpace() {
             lessons.map((l, i) => `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border)">
               <span style="font-size:.92rem">${i+1}. ${esc(l.title)}</span>
-              <button class="btn-sm btn-outline-sm" onclick='openLessonViewer(${JSON.stringify(l).replace(/'/g,"&apos;")})'>Voir</button>
+              <button type="button" class="btn-sm btn-outline-sm" data-lesson="${encodeURIComponent(JSON.stringify(l))}" onclick="openLessonViewer(JSON.parse(decodeURIComponent(this.dataset.lesson)))">Voir</button>
             </div>`).join('')}
         </div>` : ''}
       </div>`;
@@ -945,6 +944,7 @@ function toDriveEmbed(url) {
 }
 
 window.openLessonViewer = function(lesson) {
+  if (!lesson) return;
   document.getElementById('lessonViewerTitle').textContent = lesson.title || 'Leçon';
   let body = '';
   if (lesson.videoLink) {
@@ -1055,7 +1055,6 @@ window.showAdminPage = function(page) {
   if (link) link.classList.add('active');
   const titles = {dashboard:'Dashboard', membres:'Membres', inscriptions:'Inscriptions', parametres:'Paramètres'};
   document.getElementById('adminPageTitle').textContent = titles[page] || 'Admin';
-  // Close sidebar on mobile after navigating
   document.getElementById('adminSidebar').classList.remove('open');
   document.getElementById('sidebarBackdrop').classList.remove('show');
   if (page === 'dashboard' || page === 'membres' || page === 'inscriptions') refreshAdmin();
@@ -1153,7 +1152,7 @@ window.refreshAdmin = async function() {
       </td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;color:#94a3b8">Aucune inscription</td></tr>';
-}
+};
 
 function fmtDate(ts) {
   if (!ts) return '-';
@@ -1209,7 +1208,6 @@ window.closePreuveViewer = function() {
 
 /* ---------- PARAMETRES ADMIN ---------- */
 async function loadSettingsForm() {
-  // Affiche d'abord les 3 parties par défaut (même si Firestore échoue)
   const fallback = [
     { id: "HLZ", name: "HLZ", lessons: [] },
     { id: "SND", name: "SND", lessons: [] },
@@ -1230,7 +1228,6 @@ async function loadSettingsForm() {
     document.getElementById('mvolaNumbersAdmin').innerHTML = '';
     (s.mvolaNumbers || []).forEach(n => addMvolaRow(n.label, n.numero));
 
-    // Affiche les vraies données (avec leçons déjà enregistrées)
     const sections = (s.formationSections && s.formationSections.length)
       ? s.formationSections
       : fallback;
@@ -1239,7 +1236,6 @@ async function loadSettingsForm() {
     renderFormationSectionsAdmin(sections);
   } catch (err) {
     console.error(err);
-    // On garde les 3 parties affichées même en cas d'erreur
     alert("Attention : connexion Firestore instable.\nLes 3 parties sont affichées en mode local.\nErreur : " + err.message);
   }
 }
@@ -1298,7 +1294,6 @@ function lessonRowHtml(sectionId, index, lesson) {
 window.addLessonRow = function(sectionId) {
   const container = document.getElementById('lessons-' + sectionId);
   if (!container) return;
-  // Remove the "Aucune leçon..." message if present
   const emptyMsg = container.querySelector('.empty-lesson-msg');
   if (emptyMsg) emptyMsg.remove();
   const div = document.createElement('div');
@@ -1328,7 +1323,6 @@ document.getElementById('formSettings').addEventListener('submit', async functio
       numero: row.querySelector('.mvola-num').value
     })).filter(n => n.numero);
 
-    // Sécurise formationSections même si cachedSettings est vide
     let formationSections = [];
     if (cachedSettings && cachedSettings.formationSections) {
       formationSections = cachedSettings.formationSections;
@@ -1364,7 +1358,6 @@ document.getElementById('formSettings').addEventListener('submit', async functio
     await setDoc(doc(db, "settings", "general"), s);
     cachedSettings = s;
 
-    // Force refresh affichage public immédiatement
     const priceEl = document.getElementById("displayPriceFormation");
     if (priceEl) priceEl.textContent = Number(s.priceFormation).toLocaleString("fr-FR") + " Ar";
     const heroEl = document.getElementById("heroTextEl");
