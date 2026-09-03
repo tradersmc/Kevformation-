@@ -949,15 +949,14 @@ window.openLessonViewer = function(lesson) {
   let body = '';
   if (lesson.videoLink) {
     body += `<p style="font-weight:600;margin-bottom:8px">🎬 Vidéo</p>
-      <div style="position:relative;padding-top:56%;border-radius:10px;overflow:hidden;margin-bottom:20px">
+      <div style="position:relative;padding-top:56%;border-radius:10px;overflow:hidden;margin-bottom:10px">
         <iframe src="${esc(toDriveEmbed(lesson.videoLink))}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allow="autoplay" allowfullscreen></iframe>
-      </div>`;
+      </div>
+      <a href="${esc(lesson.videoLink)}" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:.85rem;color:var(--primary);margin-bottom:20px">La vidéo ne s'affiche pas ? Ouvrir dans Drive</a>`;
   }
   if (lesson.pdfLink) {
     body += `<p style="font-weight:600;margin-bottom:8px">📄 PDF</p>
-      <div style="position:relative;padding-top:130%;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
-        <iframe src="${esc(toDriveEmbed(lesson.pdfLink))}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen></iframe>
-      </div>`;
+      <a href="${esc(lesson.pdfLink)}" target="_blank" rel="noopener" class="btn btn-main btn-full" style="margin-bottom:20px">📄 Ouvrir le PDF</a>`;
   }
   if (!lesson.videoLink && !lesson.pdfLink) {
     body = '<p style="color:var(--gray)">Aucun contenu disponible pour cette leçon pour le moment.</p>';
