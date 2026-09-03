@@ -936,34 +936,53 @@ async function renderMemberSpace() {
   }
 }
 
-function toDriveEmbed(url) {
-  if (!url) return '';
+function getDriveFileId(url) {
+  if (!url) return null;
   const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-  if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  return m ? m[1] : null;
+}
+
+function toDrivePreview(url) {
+  const id = getDriveFileId(url);
+  if (id) return `https://drive.google.com/file/d/${id}/preview`;
   return url;
+}
+
+function toDocsViewer(url) {
+  const id = getDriveFileId(url);
+  if (id) return `https://drive.google.com/file/d/${id}/preview`;
+  // fallback Google Docs viewer (works better for some PDFs)
+  return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
 }
 
 window.openLessonViewer = function(lesson) {
   if (!lesson) return;
   document.getElementById('lessonViewerTitle').textContent = lesson.title || 'Leçon';
   let body = '';
+
   if (lesson.videoLink) {
+    const preview = toDrivePreview(lesson.videoLink);
     body += `<p style="font-weight:600;margin-bottom:8px">🎬 Vidéo</p>
-      <div style="position:relative;padding-top:56%;border-radius:10px;overflow:hidden;margin-bottom:10px;background:#0f172a">
-        <iframe src="${esc(toDriveEmbed(lesson.videoLink))}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allow="autoplay" allowfullscreen></iframe>
+      <div style="position:relative;padding-top:56%;border-radius:10px;overflow:hidden;margin-bottom:12px;background:#0f172a">
+        <iframe src="${esc(preview)}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allow="autoplay" allowfullscreen></iframe>
       </div>
-      <a href="${esc(lesson.videoLink)}" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:.85rem;color:var(--primary);margin-bottom:20px">La vidéo ne s'affiche pas ? Ouvrir dans Drive</a>`;
+      <a href="${esc(lesson.videoLink)}" target="_blank" rel="noopener" class="btn btn-main btn-full" style="margin-bottom:20px">▶ Ouvrir la vidéo (si elle ne s'affiche pas ici)</a>`;
   }
+
   if (lesson.pdfLink) {
+    const preview = toDrivePreview(lesson.pdfLink);
     body += `<p style="font-weight:600;margin-bottom:8px">📄 PDF</p>
-      <div style="position:relative;height:70vh;min-height:420px;border-radius:10px;overflow:hidden;margin-bottom:10px;border:1px solid #e2e8f0;background:#f8fafc">
-        <iframe src="${esc(toDriveEmbed(lesson.pdfLink))}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen></iframe>
+      <div style="position:relative;height:65vh;min-height:380px;border-radius:10px;overflow:hidden;margin-bottom:12px;border:1px solid #e2e8f0;background:#f8fafc">
+        <iframe src="${esc(preview)}" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen></iframe>
       </div>
-      <a href="${esc(lesson.pdfLink)}" target="_blank" rel="noopener" style="display:block;text-align:center;font-size:.85rem;color:var(--primary);margin-bottom:12px">Le PDF ne s'affiche pas ? Ouvrir dans un nouvel onglet</a>`;
+      <a href="${esc(lesson.pdfLink)}" target="_blank" rel="noopener" class="btn btn-main btn-full" style="margin-bottom:8px">📄 Ouvrir le PDF en grand (recommandé)</a>
+      <p style="text-align:center;font-size:.8rem;color:var(--gray);margin-bottom:12px">Si le PDF ne s'affiche pas ci-dessus, utilisez le bouton.</p>`;
   }
+
   if (!lesson.videoLink && !lesson.pdfLink) {
     body = '<p style="color:var(--gray)">Aucun contenu disponible pour cette leçon pour le moment.</p>';
   }
+
   document.getElementById('lessonViewerBody').innerHTML = body;
   document.getElementById('lessonViewerOverlay').style.display = 'block';
 };
